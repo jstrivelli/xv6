@@ -50,8 +50,9 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = proc->sz;
-  if(growproc(n) < 0)
-    return -1;
+//  if(growproc(n) < 0)
+//    return -1;
+  proc->sz += n;
   return addr;
 }
 
@@ -87,4 +88,12 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int
+sys_halt(void){
+  char *p = "Shutdown";
+  for( ; *p; p++)
+    outb(0x8900, *p);
+  return 0;
 }
