@@ -12,6 +12,7 @@
 struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
+extern int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 uint ticks;
 
 void
@@ -87,6 +88,28 @@ trap(struct trapframe *tf)
       panic("trap");
     }
 
+  if(tf->trapno == T_PGFLT){
+    // rcr2() is the address causing page fault
+    // should only allocate for this page
+    char * mem;
+    uint a;
+
+    a = PGROUNDDOWN(rcr2());
+
+    mem = kalloc();
+    if(mem == 0){
+        cprintf("allocuvm out of memory\n");
+        cprintf("pid %d %s: trap %d err %d on cpu %d "
+            "eip 0x%x addr 0x%x--kill proc\n",
+            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip,
+            rcr2());
+        proc->killed = 1;
+        return;
+    }
+    memset(mem, 0, PGSIZE);
+    mappages(proc->pgdir, (void *)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
+    return;
+  }
 	
     // In user space, assume process misbehaved.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
