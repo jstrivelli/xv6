@@ -22,6 +22,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int alarm(int ticks, void (*handler)());
 int halt(void) __attribute__((noreturn));
 
 // ulib.c
