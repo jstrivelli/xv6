@@ -74,7 +74,7 @@ found:
   p->handlers[1] = (sighandler_t)-1;
   p->alarmed = 0;
   p->trampoline = (uint)-1;
-
+  p->skip = 0;
   return p;
 }
 

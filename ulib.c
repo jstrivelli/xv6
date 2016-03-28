@@ -115,11 +115,10 @@ int signal(int signum, sighandler_t handler)
   register_signal_handler(signum, handler,(uint)trampoline);
   return id; 
 }
-/*
-int alarm(int seconds)
-{
-  int ticks = 0;
-  return ticks;
-}*/
 
+int stop(){
+
+  printf(1, "We are skipping a process");
+  return skip();
+}
 

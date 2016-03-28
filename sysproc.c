@@ -137,3 +137,10 @@ int sys_alarm(void)
   proc->alarmed = seconds+1;
   return 0;
 }
+
+int sys_skip(void){
+
+cprintf("We are setting the skip flag");
+proc->skip = 1;
+return 0;
+}

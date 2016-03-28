@@ -23,3 +23,4 @@
 #define SYS_halt   22
 #define SYS_register_signal_handler 23
 #define SYS_alarm 24
+#define SYS_skip  25

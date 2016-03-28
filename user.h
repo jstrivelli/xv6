@@ -28,7 +28,8 @@ int uptime(void);
 int halt(void);
 //int register_signal_handler(int signum, sighandler_t handler, void (*trampoline)());
 int alarm(int seconds);
-
+int skip(void);
+int stop(void);
 // ulib.c
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);

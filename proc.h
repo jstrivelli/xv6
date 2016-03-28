@@ -18,7 +18,6 @@ struct cpu {
   struct proc *proc;           // The currently-running process.
 };
 void stackstore(int);
-void stackstuff(int);
 
 extern struct cpu cpus[NCPU];
 extern int ncpu;
@@ -73,6 +72,7 @@ struct proc {
   sighandler_t handlers[2]; //Array of signal handlers
   int alarmed;
   uint trampoline;
+  uint skip;
 };
 
 // Process memory is laid out contiguously, low addresses first:

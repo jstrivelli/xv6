@@ -51,7 +51,10 @@ trap(struct trapframe *tf)
 
           siginfo_t info;
           info.signum = SIGFPE;
-
+          if(proc->skip == 1){
+		proc->tf->eip = proc->tf->eip + 4;
+                return;
+          }
           *((siginfo_t*)(tf->esp-sizeof(siginfo_t))) = info;
           *((uint*)(tf->esp-sizeof(siginfo_t)-4)) = tf->eip;
 
