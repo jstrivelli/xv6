@@ -1,3 +1,5 @@
+#include "signal.h"
+
 // Segments in proc->gdt.
 #define NSEGS     7
 
@@ -15,6 +17,8 @@ struct cpu {
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
 };
+void stackstore(int);
+void stackstuff(int);
 
 extern struct cpu cpus[NCPU];
 extern int ncpu;
@@ -57,7 +61,7 @@ struct proc {
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
-  volatile int pid;            // Process ID
+  int pid;                     // Process ID
   struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
@@ -66,9 +70,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int alarmticks;
-  int ticks;
-  void (*alarmhandler)();
+  sighandler_t handlers[2]; //Array of signal handlers
+  int alarmed;
+  uint trampoline;
 };
 
 // Process memory is laid out contiguously, low addresses first:

@@ -99,6 +99,7 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_halt(void);
+extern int sys_register_signal_handler(void);
 extern int sys_alarm(void);
 
 static int (*syscalls[])(void) = {
@@ -124,7 +125,8 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_halt]    sys_halt,
-[SYS_alarm]   sys_alarm,
+[SYS_register_signal_handler] sys_register_signal_handler,
+[SYS_alarm] sys_alarm,
 };
 
 void

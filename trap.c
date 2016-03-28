@@ -12,7 +12,6 @@
 struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
-extern int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 uint ticks;
 
 void
@@ -48,6 +47,18 @@ trap(struct trapframe *tf)
   }
 
   switch(tf->trapno){
+  case T_DIVIDE:;
+
+          siginfo_t info;
+          info.signum = SIGFPE;
+
+          *((siginfo_t*)(tf->esp-sizeof(siginfo_t))) = info;
+          *((uint*)(tf->esp-sizeof(siginfo_t)-4)) = tf->eip;
+
+          tf->esp = (uint)((tf->esp)-(sizeof(siginfo_t))-4);
+          tf->eip = (uint)proc->handlers[info.signum];
+    
+    break;
   case T_IRQ0 + IRQ_TIMER:
     if(cpu->id == 0){
       acquire(&tickslock);
@@ -55,15 +66,7 @@ trap(struct trapframe *tf)
       wakeup(&ticks);
       release(&tickslock);
     }
-      if(proc && (tf->cs & 3) == 3){
-        proc->ticks++;
-        if(proc->alarmticks == proc->ticks){
-          proc->ticks = 0;
-          tf->esp -= 4;
-          *((uint *)(tf->esp)) = tf->eip;
-          tf->eip =(uint) proc->alarmhandler;
-        }
-      }
+    dec_count();
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:
@@ -96,36 +99,13 @@ trap(struct trapframe *tf)
               tf->trapno, cpu->id, tf->eip, rcr2());
       panic("trap");
     }
-
-  if(tf->trapno == T_PGFLT){
-    // rcr2() is the address causing page fault
-    // should only allocate for this page
-    char * mem;
-    uint a;
-
-    a = PGROUNDDOWN(rcr2());
-
-    mem = kalloc();
-    if(mem == 0){
-        cprintf("allocuvm out of memory\n");
-        cprintf("pid %d %s: trap %d err %d on cpu %d "
-            "eip 0x%x addr 0x%x--kill proc\n",
-            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip,
-            rcr2());
-        proc->killed = 1;
-        return;
-    }
-    memset(mem, 0, PGSIZE);
-    mappages(proc->pgdir, (void *)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
-    return;
-  }
-	
     // In user space, assume process misbehaved.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",
             proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, 
             rcr2());
     proc->killed = 1;
+
   }
 
   // Force process exit if it has been killed and is in user space.
@@ -133,7 +113,6 @@ trap(struct trapframe *tf)
   // until it gets to the regular system call return.)
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
-
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
@@ -142,4 +121,5 @@ trap(struct trapframe *tf)
   // Check if the process has been killed since we yielded
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
     exit();
+
 }

@@ -104,36 +104,41 @@ sys_halt(void)
   return 0;
 }
 
-int sys_register_signal_handler(void){
+int 
+sys_register_signal_handler(void)
+{
+  int signum = -1;
+  int inthandler = -1;
+  int inttramp = -1;
 
-  int signum;
-  int hand;
-  int tramp;
-
-  if(argint(0, &signum) < -1) {
+  if (argint(0, &signum) < 0){
+    cprintf("error: no args\n");
     return -1;
   }
-  if(argint(1, &hand) < -1) {
+  
+  if (argint(1, &inthandler) < 0){
+    cprintf("error: no handler\n");
     return -1;
   }
-    if(argint(2, &tramp) < -1) {
-    return -1;
+  if (argint(2, &inttramp) < 0){
+    cprintf("error: no trampoline\n");
   }
-    //cprintf("MY SIGNAL IS: %d...\n", signum);
-  sighandler_t handler = (sighandler_t)hand;
-  if(signum != -1){
-    proc->handlers[signum] = handler;
-    proc->trampoline = (uint)tramp;
-  }
-  return 0;
+  
+  sighandler_t handler = (sighandler_t)inthandler;
+  void (*trampoline)() = (void (*)())inttramp;
+  //cprintf("this is sysproc r_s_h\n");
+  return register_signal_handler(signum, handler, trampoline);
 
 }
 
-int sys_alarm(void)
+int 
+sys_alarm(void)
 {
   int seconds;
   argint(0, &seconds);
-  if(argint(0, &seconds) < 0){return -1;}
-  proc->alarmed = seconds+1;
+  //cprintf("alarm assigned to proc for %d sec\n", seconds);
+  if (proc->countdown > 0)
+    cprintf("error: this proc already has an alarm\n");
+  else proc->countdown = seconds*500;
   return 0;
 }

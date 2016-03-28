@@ -1,4 +1,7 @@
+#include "signal.h"
+
 struct stat;
+struct rtcdate;
 
 // system calls
 int fork(void);
@@ -22,8 +25,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int alarm(int ticks, void (*handler)());
-int halt(void) __attribute__((noreturn));
+int halt(void);
+//int register_signal_handler(int signum, sighandler_t handler, void (*trampoline)());
+int alarm(int seconds);
 
 // ulib.c
 int stat(char*, struct stat*);
@@ -38,3 +42,5 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int signal(int signum, sighandler_t handler);
+//void trampoline(void);

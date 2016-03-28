@@ -69,9 +69,11 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-  p->alarmticks = 0;
-  p->alarmhandler = 0;
-  p->ticks = 0;
+
+  p->handlers[0] = (sighandler_t)-1;
+  p->handlers[1] = (sighandler_t)-1;
+  p->alarmed = 0;
+  p->trampoline = (uint)-1;
 
   return p;
 }
@@ -156,10 +158,16 @@ fork(void)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
+
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
  
   pid = np->pid;
+
+  // lock to force the compiler to emit the np->state write last.
+  acquire(&ptable.lock);
   np->state = RUNNABLE;
-  safestrcpy(np->name, proc->name, sizeof(proc->name));
+  release(&ptable.lock);
+  
   return pid;
 }
 
@@ -183,7 +191,9 @@ exit(void)
     }
   }
 
+  begin_op();
   iput(proc->cwd);
+  end_op();
   proc->cwd = 0;
 
   acquire(&ptable.lock);
@@ -278,6 +288,10 @@ scheduler(void)
       proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      if (p->alarmed == 1){
+        p->alarmed = 0;
+        stackstore(1);
+      }
       swtch(&cpu->scheduler, proc->context);
       switchkvm();
 
@@ -334,7 +348,8 @@ forkret(void)
     // of a regular process (e.g., they call sleep), and thus cannot 
     // be run from main().
     first = 0;
-    initlog();
+    iinit(ROOTDEV);
+    initlog(ROOTDEV);
   }
   
   // Return to "caller", actually trapret (see allocproc).
@@ -457,6 +472,43 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int register_signal_handler(int signum, sighandler_t handler, void (*trampoline)()){
+
+  proc->handlers[signum] = handler;
+  proc->trampoline = (uint)trampoline;
+  //cprintf("signal registered for signum %d\n", signum);
+  return 0;
+}
+
+void dec_count(void){
+  int i = 0;
+  for(i = 0; i<NPROC;i++){
+    if(ptable.proc[i].alarmed > 1)
+    {
+      ptable.proc[i].alarmed--;
+    }
+  }
+}
+
+void stackstore(int signum){
+                                                                                                  
+  siginfo_t info;
+  uint old_eip;
+  
+  info.signum = signum;
+  old_eip = proc->tf->eip;
+  //cprintf("stackstuff signum %d\n", signum);
+  proc->tf->eip = (uint)(proc->handlers[signum]);  
+  *((uint*)(proc->tf->esp- 4)) = old_eip;
+  *((uint*)(proc->tf->esp- 8)) = proc->tf->eax;
+  *((uint*)(proc->tf->esp- 12)) = proc->tf->ecx;
+  *((uint*)(proc->tf->esp- 16)) = proc->tf->edx;
+  *((siginfo_t*)(proc->tf->esp- 20)) = info;
+  *((uint*)(proc->tf->esp-24)) = (uint)(proc->trampoline);
+  proc->tf->esp -=24;
+
 }
 
 

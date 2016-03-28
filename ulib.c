@@ -103,3 +103,23 @@ memmove(void *vdst, void *vsrc, int n)
     *dst++ = *src++;
   return vdst;
 }
+int register_signal_handler(int signum, sighandler_t handler, uint tramp);
+void trampoline(void){
+  __asm__ ("movl 0x8(%ebp),%edx\n\t    movl 0xc(%ebp),%ecx\n\t  movl 0x10(%ebp),%eax\n\t add $0x14,%ebp\n\t movl %ebp,%esp\n\t ret\n\t");
+}
+
+
+int signal(int signum, sighandler_t handler)
+{
+  int id = 0;
+  register_signal_handler(signum, handler,(uint)trampoline);
+  return id; 
+}
+/*
+int alarm(int seconds)
+{
+  int ticks = 0;
+  return ticks;
+}*/
+
+
